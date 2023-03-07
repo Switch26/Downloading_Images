@@ -156,22 +156,7 @@ extension RequestProtocol {
 }
 
 
-protocol DataParserProtocol {
-  func parse<T: Decodable>(data: Data) throws -> T
-}
 
-class DataParser: DataParserProtocol {
-  private var jsonDecoder: JSONDecoder
-
-  init(jsonDecoder: JSONDecoder = JSONDecoder()) {
-    self.jsonDecoder = jsonDecoder
-    self.jsonDecoder.keyDecodingStrategy = .convertFromSnakeCase
-  }
-
-  func parse<T: Decodable>(data: Data) throws -> T {
-    return try jsonDecoder.decode(T.self, from: data)
-  }
-}
 
 
 protocol APIManagerProtocol {
@@ -208,23 +193,23 @@ protocol RequestManagerProtocol {
 class RequestManager: RequestManagerProtocol {
     
     let apiManager: APIManagerProtocol
-    let parser: DataParserProtocol
+    let decoder: DataDecoderProtocol
     
-    init(apiManager: APIManagerProtocol = APIManager(), parser: DataParserProtocol = DataParser()) {
+    init(apiManager: APIManagerProtocol = APIManager(), parser: DataDecoderProtocol = DataDecoder()) {
         self.apiManager = apiManager
-        self.parser = parser
+        self.decoder = parser
     }
     
     func perform<T: Decodable>(_ request: RequestProtocol) async throws -> T {
         let authToken = try await requestAccessToken()
         let data = try await apiManager.perform(request, authToken: authToken)
-        let decoded: T = try parser.parse(data: data)
+        let decoded: T = try decoder.decode(data: data)
         return decoded
     }
     
     func requestAccessToken() async throws -> String {
         let data = try await apiManager.requestToken()
-        let token: APIToken = try parser.parse(data: data)
+        let token: APIToken = try decoder.decode(data: data)
         return token.accessToken
     }
 }
